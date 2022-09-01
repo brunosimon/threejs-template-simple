@@ -1,40 +1,30 @@
 import * as THREE from 'three';
-import { DragControls } from 'three/examples/js/controls/DragControls';
-
-// Defining tolerance to allow error margin.
-let tolerance = 1e-3;
+import { DragControls } from 'three/examples/jsm/controls/DragControls';
 
 // Function to evaluate distance between two points.
 function distance(vertex1, vertex2) {
-  return Math.sqrt(
-    (vertex1[0] - vertex2[0]) ** 2 + (vertex1[1] - vertex2[1]) ** 2
-  );
+  return Math.sqrt((vertex1[0] - vertex2[0]) ** 2 + (vertex1[1] - vertex2[1]) ** 2);
 }
 
 // Function to evaluate whether two lines, each one defined by a pair of points, are parrallel or not.
 function isParallel(line1, line2) {
+
   // If both are vertical.
-  if (
-    Math.abs(line1[0][0] - line1[1][0]) < tolerance &&
-    Math.abs(line2[0][0] - line2[1][0]) < tolerance
-  ) {
-    return true;
+  if (line1[0][0] == line1[1][0] && line2[0][0] == line2[1][0]) {
+      return true;
   }
   // If neither is vertical.
   else if (line1[0][0] != line1[1][0] && line2[0][0] != line2[1][0]) {
-    // Difference on alpha is negligeble.
-    if (
-      Math.abs(
-        (line1[1][1] - line1[0][1]) / (line1[1][0] - line1[0][0]) -
-          (line2[1][1] - line2[0][1]) / (line2[1][0] - line2[0][0])
-      ) < tolerance
-    ) {
-      return true;
-    } else {
+      // Equal alpha.
+      if ((line1[1][1] - line1[0][1]) / (line1[1][0] - line1[0][0]) == (line2[1][1] - line2[0][1]) / (line2[1][0] - line2[0][0])) {
+          return true;
+      }
+      else {
+          return false;
+      }
+  }
+  else {
       return false;
-    }
-  } else {
-    return false;
   }
 }
 
@@ -42,33 +32,25 @@ function isParallel(line1, line2) {
 function intersectionPoint(line1, line2) {
   // If they are parrallel, no intersection point.
   if (isParallel(line1, line2)) {
-    return null;
-  } else {
-    // If line1 is vertical.
-    if (Math.abs(line1[0][0] - line1[1][0]) < tolerance) {
-      return [
-        line1[0][0],
-        line2[0][1] +
-          ((line2[1][1] - line2[0][1]) / (line2[1][0] - line2[0][0])) *
-            (line1[0][0] - line2[0][0])
-      ];
-    }
-    // If line2 is vertical.
-    else if (Math.abs(line2[0][0] - line2[1][0]) < tolerance) {
-      return [
-        line2[0][0],
-        line1[0][1] +
-          ((line1[1][1] - line1[0][1]) / (line1[1][0] - line1[0][0])) *
-            (line2[0][0] - line1[0][0])
-      ];
-    } else {
-      let a1, a2, b1, b2;
-      a1 = (line1[1][1] - line1[0][1]) / (line1[1][0] - line1[0][0]);
-      b1 = line1[0][1] - line1[0][0] * a1;
-      a2 = (line2[1][1] - line2[0][1]) / (line2[1][0] - line2[0][0]);
-      b2 = line2[0][1] - line2[0][0] * a2;
-      return [-(b2 - b1) / (a2 - a1), (a2 * b1 - a1 * b2) / (a2 - a1)];
-    }
+      return null;
+  }
+  else {
+      // If line1 is vertical.
+      if (line1[0][0] == line1[1][0]){
+          return [line1[0][0], line2[0][1] + (line2[1][1] - line2[0][1]) / (line2[1][0] - line2[0][0]) * (line1[0][0] - line2[0][0])];
+      }
+      // If line2 is vertical.
+      else if (line2[0][0] == line2[1][0]){
+          return [line2[0][0], line1[0][1] + (line1[1][1] - line1[0][1]) / (line1[1][0] - line1[0][0]) * (line2[0][0] - line1[0][0])];
+      }
+      else {
+          let a1, a2, b1, b2;
+          a1 = (line1[1][1] - line1[0][1]) / (line1[1][0] - line1[0][0]);
+          b1 = line1[0][1] - line1[0][0]*a1;
+          a2 = (line2[1][1] - line2[0][1]) / (line2[1][0] - line2[0][0]);
+          b2 = line2[0][1] - line2[0][0]*a2;
+          return [- (b2-b1) / (a2-a1), (a2 * b1 - a1 * b2) / (a2 - a1)];
+      }
   }
 }
 
@@ -77,48 +59,37 @@ function pointInPolygon(point, polygon) {
   let total_intersections = 0;
   // Iterating over all edges of the polygon, which are defined by one vertice and its consecutive.
   for (const [index, vertex] of polygon.entries()) {
-    const next_vertex = polygon[(index + 1) % polygon.length];
-    // If edge is horizontal, the ray cannot touch unless the point has the same y, in which case it doesnt matter to count them.
-    // If it is in the edge, it is in the polygon.
-    if (Math.abs(vertex[1] - next_vertex[1]) < tolerance) {
-      if (
-        Math.abs(point[1] - vertex[1]) < tolerance &&
-        (point[0] - vertex[0] < tolerance ||
-          point[0] - next_vertex[0] < tolerance)
-      ) {
-        return true;
+      const next_vertex = polygon[(index + 1) % polygon.length];
+      // If edge is horizontal, the ray cannot touch unless the point has the same y, in which case it doesnt matter to count them. 
+      if(vertex[1] == next_vertex[1]) {
+          if (point[1] == vertex[1]) {
+              if (point[0] < vertex[0]) {
+                  total_intersections++;
+              }
+              if (point[0] < next_vertex[0]) {
+                  total_intersections++;
+              }
+          } 
       }
-    } else {
-      // Intersection point of line defined by the edge must be greater than the x coordinate of the point to intersect.
-      if (
-        (point[1] - vertex[1] < tolerance &&
-          next_vertex[1] - point[1] < tolerance) ||
-        (vertex[1] - point[1] < tolerance &&
-          point[1] - next_vertex[1] < tolerance)
-      ) {
-        let aux =
-          point[0] -
-          (vertex[0] +
-            ((next_vertex[0] - vertex[0]) / (next_vertex[1] - vertex[1])) *
-              (point[1] - vertex[1]));
-        // If the difference is negligeble, the point is considered to be a vertex, thus inside.
-        if (Math.abs(aux) < tolerance) {
-          return true;
-        } else if (aux < 0) {
-          total_intersections++;
-        }
+      else {
+          // Intersection point of line defined by the edge must be greater than the x coordinate of the point to intersect.
+          if ((point[1] < vertex[1] && next_vertex[1] < point[1]) || ((vertex[1] < point[1] && point[1] < next_vertex[1]))) {
+              if (point[0] - (vertex[0] + (next_vertex[0] - vertex[0]) / (next_vertex[1] - vertex[1]) * (point[1] - vertex[1])) < 0) {
+                  total_intersections++;
+              }
+          }
       }
-    }
   }
   // Must intersect an odd number of times.
-  return total_intersections % 2;
+  return total_intersections % 2
 }
 
 // Function to evaluate the intersection of two not self intersecting polygons using Weiler-Atherton algorithm.
 function weilerAtherton(polygon1, polygon2) {
+  //console.log(polygon1, polygon2);
   // Polygon1: subject polygon. Polygon2: clip polygon.
 
-  // Intersections of edges of polygon1 with polygon2, each position i of intersections1 contains all
+  // Intersections of edges of polygon1 with polygon2, each position i of intersections1 contains all 
   // the intersection points that edge i makes with all the other edges from polygon2.
   let intersections1 = [];
   // Intersections of edges of polygon2 with polygon1.
@@ -130,313 +101,206 @@ function weilerAtherton(polygon1, polygon2) {
 
   // Final polygon.
   let polygon = [];
-
+  
   // Iterating over all edges to find all intersection points.
   for (const [index1, vertex1] of polygon1.entries()) {
-    const next_vertex1 = polygon1[(index1 + 1) % polygon1.length];
+      
+      const next_vertex1 = polygon1[(index1 + 1) % polygon1.length];
+      
+      intersections1.push([]);
 
-    intersections1.push([]);
-
-    for (const [index2, vertex2] of polygon2.entries()) {
-      const next_vertex2 = polygon2[(index2 + 1) % polygon2.length];
-      if (index1 == 0) {
-        intersections2.push([]);
-      }
-      // Intersection point of line defined by edge 1 and edge 2.
-      let point = intersectionPoint(
-        [vertex1, next_vertex1],
-        [vertex2, next_vertex2]
-      );
-      // The edges may be parrallel.
-      if (point != null) {
-        // Evaluaiting whether the point is in both edge 1 and edge2.
-        if (
-          (vertex1[0] - point[0] < tolerance &&
-            point[0] - next_vertex1[0] < tolerance) ||
-          (point[0] - vertex1[0] < tolerance &&
-            next_vertex1[0] - point[0] < tolerance)
-        ) {
-          if (
-            (vertex1[1] - point[1] < tolerance &&
-              point[1] - next_vertex1[1] < tolerance) ||
-            (point[1] - vertex1[1] < tolerance &&
-              next_vertex1[1] - point[1] < tolerance)
-          ) {
-            if (
-              (vertex2[0] - point[0] < tolerance &&
-                point[0] - next_vertex2[0] < tolerance) ||
-              (point[0] - vertex2[0] < tolerance &&
-                next_vertex2[0] - point[0] < tolerance)
-            ) {
-              if (
-                (vertex2[1] - point[1] < tolerance &&
-                  point[1] - next_vertex2[1] < tolerance) ||
-                (point[1] - vertex2[1] < tolerance &&
-                  next_vertex2[1] - point[1] < tolerance)
-              ) {
-                // If the point isn't already a point of the polygon, then it is an intersection point.
-                if (
-                  distance(point, vertex1) > tolerance &&
-                  distance(point, next_vertex1) > tolerance
-                ) {
-                  intersections1[index1].push(point);
-                  inter1_empty = false;
-                }
-                if (
-                  distance(point, vertex2) > tolerance &&
-                  distance(point, next_vertex2) > tolerance
-                ) {
-                  intersections2[index2].push(point);
-                  inter2_empty = false;
-                }
-              }
-            }
+      for (const [index2, vertex2] of polygon2.entries()) {
+          const next_vertex2 = polygon2[(index2 + 1) % polygon2.length];
+          if (index1 == 0) {
+              intersections2.push([]);
           }
-        }
+          // Intersection point of line defined by edge 1 and edge 2.
+          let point = intersectionPoint([vertex1, next_vertex1], [vertex2, next_vertex2]);
+          // The edges may be parrallel.
+          if (point != null) {
+              // Evaluaiting whether the point is in both edge 1 and edge2.
+              if ((vertex1[0] <= point[0] && point[0] <= next_vertex1[0]) || (point[0] <= vertex1[0] && next_vertex1[0] <= point[0])) {
+                  if ((vertex1[1] <= point[1] && point[1] <= next_vertex1[1]) || (point[1] <= vertex1[1] && next_vertex1[1] <= point[1])) {
+                      if ((vertex2[0] <= point[0] && point[0] <= next_vertex2[0]) || (point[0] <= vertex2[0] && next_vertex2[0] <= point[0])) {
+                          if ((vertex2[1] <= point[1] && point[1] <= next_vertex2[1]) || (point[1] <= vertex2[1] && next_vertex2[1] <= point[1])) {
+                              // If the point isn't already a point of the polygon, then it is an intersection point.
+                              if (point != vertex1 && point != next_vertex1) {
+                                  intersections1[index1].push(point);
+                                  inter1_empty = false;
+                              }
+                              if (point != vertex2 && point != next_vertex2) {
+                                  intersections2[index2].push(point);
+                                  inter2_empty = false;
+                              }
+                          }
+                      }
+                  }
+              }
+          }
       }
-    }
 
-    // Sort intersection points based on the distance from the origin vertex.
-    intersections1[index1].sort(function (a, b) {
-      return distance(a, vertex1) - distance(b, vertex1);
-    });
+      // Sort intersection points based on the distance from the origin vertex.
+      intersections1[index1].sort(function(a, b) {return distance(a, vertex1) - distance(b, vertex1)});
   }
   for (const [index2, vertex2] of polygon2.entries()) {
-    intersections2[index2].sort(function (a, b) {
-      return distance(a, vertex2) - distance(b, vertex2);
-    });
-  }
-
-  // Clearing intersections found, because there may have repeated intersection points.
-  for (let index1 = 0; index1 < intersections1.length; index1++) {
-    let index3 = 0;
-    while (index3 + 1 < intersections1[index1].length) {
-      if (
-        distance(
-          intersections1[index1][index3 + 1],
-          intersections1[index1][index3]
-        ) < tolerance
-      ) {
-        intersections1[index1].splice(index3 + 1, 1);
-      } else {
-        index3++;
-      }
-    }
-    while (
-      intersections1[index1].length > 1 &&
-      distance(
-        intersections1[index1][0],
-        intersections1[index1][intersections1[index1].length - 1]
-      ) < tolerance
-    ) {
-      intersections1[index1].pop();
-    }
-  }
-
-  for (let index2 = 0; index2 < intersections2.length; index2++) {
-    let index3 = 0;
-    while (index3 + 1 < intersections2[index2].length) {
-      if (
-        distance(
-          intersections2[index2][index3 + 1],
-          intersections2[index2][index3]
-        ) < tolerance
-      ) {
-        intersections2[index2].splice(index3 + 1, 1);
-      } else {
-        index3++;
-      }
-    }
-    while (
-      intersections2[index2].length > 1 &&
-      distance(
-        intersections2[index2][0],
-        intersections2[index2][intersections2[index2].length - 1]
-      ) < tolerance
-    ) {
-      intersections2[index2].pop();
-    }
+      intersections2[index2].sort(function(a, b) {return distance(a, vertex2) - distance(b, vertex2)});
   }
 
   // If both polygons have no intersections with each other, then either one is inside another, or they have null intersection.
   if (inter1_empty && inter2_empty) {
-    let p1 = true,
-      p2 = true,
+      let p1 = true, p2 = true, brk = false;
+      // If there is a point of polygon1 outside polygon2, then polygon 1 is not inside polygon2.
+      for (let index = 0; index < polygon1.length && !brk; index++) {
+          if (!pointInPolygon(polygon1[index], polygon2)) {
+              p1 = false;
+              brk = true;
+          }
+      }
+      // Analogous.
       brk = false;
-    // If there is a point of polygon1 outside polygon2, then polygon 1 is not inside polygon2.
-    for (let index = 0; index < polygon1.length && !brk; index++) {
-      if (!pointInPolygon(polygon1[index], polygon2)) {
-        p1 = false;
-        brk = true;
+      for (let index = 0; index < polygon2.length && !brk; index++) {
+          if (!pointInPolygon(polygon2[index], polygon1)) {
+              p2 = false;
+              brk = true;
+          }
       }
-    }
-    // Analogous.
-    brk = false;
-    for (let index = 0; index < polygon2.length && !brk; index++) {
-      if (!pointInPolygon(polygon2[index], polygon1)) {
-        p2 = false;
-        brk = true;
+      if (p1) {
+          polygon = polygon1;
       }
-    }
-    if (p1) {
-      polygon = polygon1;
-    } else if (p2) {
-      polygon = polygon2;
-    }
-    // If neither, the intersection polygon stays empty.
+      else if (p2) {
+          polygon = polygon2;
+      }
+      // If neither, the intersection polygon stays empty.
   }
   // Now the main part of the algorithm begins.
   else {
-    // Iterators over polygon or intersections.
-    let index1, index2;
-    // Bool variable that is true when the current path is over the edges of polygon1, and false when it is over the edges of polygon2.
-    let pol1;
-    // Finding a start point to the polygon, trying first a point of polygon1 inside of polygon2.
-    let brk = false;
-    for (index1 = 0; index1 < polygon1.length && !brk; index1++) {
-      if (pointInPolygon(polygon1[index1], polygon2)) {
-        // First point of the construction.
-        polygon.push(polygon1[index1]);
-        // Since it is an inner point, we are still over the edges of polygon1.
-        pol1 = true;
-        brk = true;
+      // Iterators over polygon or intersections.
+      let index1, index2;
+      // Bool variable that is true when next vertex of polygon1.
+      let pol1;
+      // Bool variable to always allow first iteration of the while loop.
+      let start = true;
+      // Searching for a start point to the polygon, trying first a point of polygon1 inside of polygon2.
+      let brk = false;
+      for (index1 = 0; index1 < polygon1.length && !brk; index1++) {
+          if (pointInPolygon(polygon1[index1], polygon2)) {
+              // First point of the construction.
+              polygon.push(polygon1[index1]);
+              brk = true;
+          }
       }
-    }
-    // If there are no points of polygon1 inside polygon2, then search the first intersection of an edge of polygon1 with and edge of polygon2.
-    if (!brk) {
-      brk = false;
-      for (index1 = 0; index1 < intersections1.length && !brk; index1++) {
-        if (intersections1[index1].length > 0) {
-          // First point of the construction.
-          polygon.push(intersections1[index1][0]);
-          // Since it is an intersection point, the next one will be over an edge of polygon2.
-          pol1 = false;
-          brk = true;
-        }
+      // If there are no points of polygon1 inside polygon2, then search for a point of polygon2 inside polygon1.
+      if (!brk) {
+          brk = false;
+          for (index2 = 0; index2 < polygon2.length && !brk; index2++) {
+              if (pointInPolygon(polygon2[index2], polygon1)) {
+                  // First point of the construction.
+                  polygon.push(polygon2[index2]);
+                  brk = true;
+              }
+          }
+          // There are no inside points, only intersections
+          if (!brk) {
+              for (index1 = 0; index1 < intersections1.length; index1++) {
+                  for (let index3 = 0; index3 < intersections1[index1].length; index3++) {
+                      polygon.push(intersections1[index1][index3]);
+                  }
+              }
+              // we will further pop in the code
+              polygon.push(polygon[0]);
+              start = false;
+          }
       }
-    }
-    // Bool variable to always allow first iteration of the following loop.
-    let start = true;
 
-    // While not coming back to first point in a cycle.
-    while (
-      start ||
-      distance(polygon[0], polygon[polygon.length - 1]) > tolerance
-    ) {
-      start = false;
-      // If over polygon1...
-      if (pol1) {
-        // Evaluating wheter the last point is a point of polygon1.
-        brk = false;
-        for (index1 = 0; index1 < polygon1.length && !brk; index1++) {
-          if (
-            distance(polygon[polygon.length - 1], polygon1[index1]) < tolerance
-          ) {
-            brk = true;
+      // While not coming back to first point in a cycle.
+      while (start || polygon[0] != polygon[polygon.length-1]) {
+          start = false;
+          // Whether last vertex from polygon was from polygon1
+          let last1 = false;
+          for (index1 = 0; index1 < polygon1.length && !last1; index1++) {
+              if (polygon[polygon.length - 1] == polygon1[index1]) {
+                  last1 = true;
+              }
           }
-        }
-        // If it is, then...
-        if (brk) {
           index1--;
-          // If the edge doesn't have other intersections, go to next point of polygon1.
-          if (intersections1[index1].length == 0) {
-            // Since the a vertex is not counted as an intersection, The next point may be outside, in which case we need to start to go over polygon2.
-            if (
-              pointInPolygon(polygon1[(index1 + 1) % polygon1.length], polygon2)
-            ) {
-              polygon.push(polygon1[(index1 + 1) % polygon1.length]);
-            } else {
-              pol1 = false;
-            }
+          // If it is, then, either the next is also from polygon1 or it is an intersection point.
+          if (last1) {
+              // If next inside, then that is the one
+              if (pointInPolygon(polygon1[(index1 + 1) % polygon1.length], polygon2)) {
+                  polygon.push(polygon1[(index1 + 1) % polygon1.length]);
+              }
+              else {
+                  polygon.push(intersections1[index1][0]);
+                  pol1 = false;
+              }
           }
-          // If the edge still has intersections, go to one of them and switch to polygon2.
           else {
-            polygon.push(intersections1[index1][0]);
-            pol1 = false;
-          }
-        }
-        // If not a point of polygon1, then it is an intersection point
-        else {
-          // Finding the edge that makes this intersecting point
-          brk = false;
-          let index3;
-          for (index1 = 0; index1 < intersections1.length && !brk; index1++) {
-            for (
-              index3 = 0;
-              index3 < intersections1[index1].length && !brk;
-              index3++
-            ) {
-              if (
-                distance(
-                  polygon[polygon.length - 1],
-                  intersections1[index1][index3]
-                ) < tolerance
-              ) {
-                brk = true;
+              // Analogous
+              let last2 = false;
+              for (index2 = 0; index2 < polygon2.length && !last2; index2++) {
+                  if (polygon[polygon.length - 1] == polygon2[index2]) {
+                      last2 = true;
+                  }
               }
-            }
-          }
-          index1--;
-          index3--;
-          // Trying to get next intersecting point of the edge, if ther isn't, then the next vertex of polygon1 is inside the polygon and we must take them.
-          if (index3 == intersections1[index1].length - 1) {
-            polygon.push(polygon1[(index1 + 1) % polygon1.length]);
-          } else {
-            polygon.push(intersections1[index1][index3 + 1]);
-            // Switching.
-            pol1 = false;
-          }
-        }
-      } else {
-        // Analogous
-        brk = false;
-        for (index2 = 0; index2 < polygon2.length && !brk; index2++) {
-          if (
-            distance(polygon[polygon.length - 1], polygon2[index2]) < tolerance
-          ) {
-            brk = true;
-          }
-        }
-        if (brk) {
-          index2--;
-          if (intersections2[index2].length == 0) {
-            polygon.push(polygon2[(index2 + 1) % polygon2.length]);
-          } else {
-            polygon.push(intersections2[index2][0]);
-            pol1 = true;
-          }
-        } else {
-          brk = false;
-          let index3;
-          for (index2 = 0; index2 < intersections2.length && !brk; index2++) {
-            for (
-              index3 = 0;
-              index3 < intersections2[index2].length && !brk;
-              index3++
-            ) {
-              if (
-                distance(
-                  polygon[polygon.length - 1],
-                  intersections2[index2][index3]
-                ) < tolerance
-              ) {
-                brk = true;
+              index2--;
+              if (last2) {
+                  if (pointInPolygon(polygon2[(index2 + 1) % polygon2.length], polygon1)) {
+                      polygon.push(polygon2[(index2 + 1) % polygon2.length])
+                  }
+                  else {
+                      polygon.push(intersections2[index2][0]);
+                      pol1 = true;
+                  }
               }
-            }
+              // If last one was not from polygon1 nor from polygon2, then it was an intersection point
+              else {
+                  let index3;
+                  // If the prediction for the next belongs to polygon1
+                  if (pol1) {
+                      // Then, search amongst the intersections to find if the next one will be indeed from polygon1, or another intersection
+                      let found = false;
+                      for (index1 = 0; index1 < intersections1.length && !found; index1++) {
+                          for (index3 = 0; index3 < intersections1[index1].length && !found; index3++) {
+                              if (polygon[polygon.length - 1] == intersections1[index1][index3]) {
+                                  found = true;
+                              }
+                          }
+                      }
+                      index1--;
+                      index3--;
+                      if (pointInPolygon(polygon1[(index1 + 1) % polygon1.length], polygon2)) {
+                          polygon.push(polygon1[(index1 + 1) % polygon1.length]);
+                      }
+                      else {
+                          polygon.push(intersections1[index1][index3 + 1]);
+                          pol1 = false;
+                      }
+                  }
+                  // Analogous
+                  else {
+                      let found = false;
+                      for (index2 = 0; index2 < intersections2.length && !found; index2++) {
+                          for (index3 = 0; index3 < intersections2[index2].length && !found; index3++) {
+                              if (polygon[polygon.length - 1] == intersections2[index2][index3]) {
+                                  found = true;
+                              }
+                          }
+                      }
+                      index2--;
+                      index3--;
+                      if (pointInPolygon(polygon2[(index2 + 1) % polygon2.length], polygon1)) {
+                          polygon.push(polygon2[(index2 + 1) % polygon2.length]);
+                      }
+                      else {
+                          polygon.push(intersections2[index2][index3 + 1]);
+                          pol1 = true;
+                      }
+                  }
+              }
           }
-          index2--;
-          index3--;
-          if (index3 == intersections2[index2].length - 1) {
-            polygon.push(polygon2[(index2 + 1) % polygon2.length]);
-          } else {
-            polygon.push(intersections2[index2][index3 + 1]);
-            pol1 = true;
-          }
-        }
       }
-    }
-    // Last iteration of loop made the first point repeated on the last
-    polygon.pop();
+      // Last iteration of loop made the first point repeated on the last
+      polygon.pop();
   }
   return polygon;
 }
@@ -445,12 +309,13 @@ function weilerAtherton(polygon1, polygon2) {
 function area(polygon) {
   let area = 0;
   for (const [index, vertex] of polygon.entries()) {
-    let next_vertex = polygon[(index + 1) % polygon.length];
-    area += -vertex[1] * next_vertex[0] + vertex[0] * next_vertex[1];
+      let next_vertex = polygon[(index + 1) % polygon.length];
+      area += -vertex[1] * next_vertex[0] + vertex[0] * next_vertex[1];
   }
   area = Math.abs(area) / 2;
   return area;
 }
+
 
 // DRAW FUNCS
 
@@ -516,67 +381,67 @@ const rotateTangram = (points) => {
 
 var houseMesh = drawShape(
   rotate([
-    [231.16634, 0.1322915],
-    [231.16634, 47.424488],
-    [231.16634 - 46.99609, 47.424488 + 46.9961],
-    [184.17024999999998 + 20.6468, 94.420588 + 0.0367],
-    [204.81705 + 0.41651, 94.45728799999999 + 66.127232],
-    [205.23355999999998 - 0.83974, 160.58452 + 0.83508],
-    [204.39381999999998 + 135.62014, 161.4196 - 0.57565],
-    [340.01396 - 1.91616, 160.84395 - 1.86503],
-    [338.0978 + 0.55965, 158.97892000000002 - 64.475122],
-    [338.65745 + 25.74676, 94.50379800000002],
-    [364.40421 - 66.42386, 94.50379800000002 - 66.841395],
-    [297.98035 - 19.466, 27.662403000000012 + 19.466],
-    [297.98035 - 19.466, 0.1322915],
-    [231.16634, 0.1322915]
+    [231.16634 + .1, 0.1322915 + .2],
+    [231.16634 + .3, 47.424488 + .4],
+    [231.16634 + .5 - 46.99609, 47.424488 + .6 + 46.9961],
+    [184.17024999999998 + .7 + 20.6468, 94.420588 + .8 + 0.0367],
+    [204.81705 + 0.41651 + .9, 94.45728799999999 + 1. + 66.127232],
+    [205.23355999999998 - 0.83974 + 1.1, 160.58452 + 1.2 + 0.83508],
+    [204.39381999999998 + 1.3 + 135.62014, 161.4196 + 1.4 - 0.57565],
+    [340.01396 - 1.91616 + 1.5, 160.84395 + 1.6 - 1.86503],
+    [338.0978 + 1.7 + 0.55965, 158.97892000000002 +1.8 - 64.475122],
+    [338.65745 + 1.9 + 25.74676, 94.50379800000002 + 2.],
+    [364.40421 - 66.42386 + 2.1, 94.50379800000002 + 2.2 - 66.841395],
+    [297.98035 - 19.466 + 2.3, 27.662403000000012 + 2.4 + 19.466],
+    [297.98035 - 19.466 + 2.5, 0.1322915 + 2.6],
+    [231.16634 + 2.7, 0.1322915 + 2.8]
   ]),
   "#FFFFFF"
 );
 var p1 = drawShape(
   rotateTangram([
-    [46.958107, 73.831854],
-    [113.79989, 140.67364],
-    [46.958107, 207.09729]
+    [46.958107 +.1, 73.831854+.2],
+    [113.79989+.3, 140.67364+.4],
+    [46.958107+.5, 207.09729+.6]
   ]),
   "#ff0000"
 );
 var p2 = drawShape(
   rotateTangram([
-    [179.80541, 73.674771],
-    [46.958107, 74.249991],
-    [113.79989, 140.67364]
+    [179.80541+.7, 73.674771+.8],
+    [46.958107+.9, 74.249991+1.0],
+    [113.79989+1.1, 140.67364+1.2]
   ]),
   "#aa0000"
 );
 
 var p3 = drawShape(
   rotateTangram([
-    [146.53452, 106.94566],
-    [146.53452, 106.94566 + 66.88075],
-    [146.53452 - 33.15276, 106.94566 + 66.88075 - 33.15277]
+    [146.53452+1.3, 106.94566+1.4],
+    [146.53452+1.5, 106.94566 + 66.88075+1.6],
+    [146.53452+1.7 - 33.15276, 106.94566+1.8 + 66.88075 - 33.15277]
   ]),
   "#ff00ff"
 );
 
 var p4 = drawShape(
   rotateTangram([
-    [179.80541, 73.674771],
-    [179.80541, 73.674771 + 66.998869],
-    [179.80541 - 33.27089, 73.674771 + 66.998869 + 33.15277],
-    [179.80541 - 33.27089, 73.674771 + 66.998869 + 33.15277 - 66.88075]
+    [179.80541+1.9, 73.674771+2],
+    [179.80541+2.1, 73.674771 + 66.998869+2.2],
+    [179.80541 - 33.27089+2.3, 73.674771+2.4 + 66.998869 + 33.15277],
+    [179.80541+2.5 - 33.27089, 73.674771+2.6 + 66.998869 + 33.15277 - 66.88075]
   ]),
   "#008080"
 );
 
 var p5 = drawShape(
   rotateTangram([
-    [79.823261, 173.65692],
-    [79.823261 + 33.440379, 173.65692 + 33.440379],
-    [79.823261 + 33.440379 + 33.27088, 173.65692 + 33.440379 - 33.68902],
+    [79.823261+2.7, 173.65692+2.8],
+    [79.823261+2.9 + 33.440379, 173.65692+3 + 33.440379],
+    [79.823261+3.1 + 33.440379 + 33.27088, 173.65692+3.2 + 33.440379 - 33.68902],
     [
-      79.823261 + 33.440379 + 33.27088 - 33.2313,
-      173.65692 + 33.440379 - 33.68902 - 33.23131
+      79.823261+3.3 + 33.440379 + 33.27088 - 33.2313,
+      173.65692+3.4 + 33.440379 - 33.68902 - 33.23131
     ]
   ]),
   "#ffff00"
@@ -584,18 +449,18 @@ var p5 = drawShape(
 
 var p6 = drawShape(
   rotateTangram([
-    [46.958107, 206.52207],
-    [46.958107 + 32.865154, 206.52207 - 32.86515],
-    [46.958107 + 32.865154 + 33.440369, 206.52207 - 32.86515 + 33.44037]
+    [46.958107+3.5, 206.52207+3.6],
+    [46.958107+3.7 + 32.865154, 206.52207+3.8 - 32.86515],
+    [46.958107+3.9 + 32.865154 + 33.440369, 206.52207+4 - 32.86515 + 33.44037]
   ]),
   "#800080"
 );
 
 var p7 = drawShape(
   rotateTangram([
-    [113.26364, 207.09729],
-    [113.26364 + 66.54177, 207.09729 - 66.42365],
-    [113.26364 + 66.54177 + 0.41813, 207.09729 - 66.42365 + 66.42365]
+    [113.26364+4.1, 207.09729+4.2],
+    [113.26364+4.3 + 66.54177, 207.09729+4.4 - 66.42365],
+    [113.26364+4.5 + 66.54177 + 0.41813, 207.09729+4.6 - 66.42365 + 66.42365]
   ]),
   "#808000"
 );
@@ -686,6 +551,7 @@ function onHandleDrop() {
   for (let pol of tangramPos) {
     totalArea += area(pol);
     intersectionArea += area(weilerAtherton(pol, houseMeshPos));
+    console.log(pol);
     for (let pol2 of tangramPos) {
       intersectionArea -= area(weilerAtherton(pol, pol2)) / 2;
     }
