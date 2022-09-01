@@ -551,12 +551,16 @@ function onHandleDrop() {
   for (let pol of tangramPos) {
     totalArea += area(pol);
     intersectionArea += area(weilerAtherton(pol, houseMeshPos));
-    console.log(pol);
+    //console.log(pol);
     for (let pol2 of tangramPos) {
-      intersectionArea -= area(weilerAtherton(pol, pol2)) / 2;
+      if (pol2 != pol) {
+        //console.log('a', pol2);
+        intersectionArea -= area(weilerAtherton(pol, pol2)) / 2;
+      }
     }
   }
 
+  console.log(intersectionArea);
   if (intersectionArea / (totalArea < 0.1 ? 1000 : totalArea) > 0.9) {
     console.log("Win");
   }
